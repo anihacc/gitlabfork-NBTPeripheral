@@ -18,7 +18,6 @@ public class NBTUtil extends CCUtil {
 			Object value = getValueOf(nbt.getTag(key));
 			nbtMap.put(key, value);
 		});
-		System.out.println(nbtMap);
 		return nbtMap;
 	}
 
