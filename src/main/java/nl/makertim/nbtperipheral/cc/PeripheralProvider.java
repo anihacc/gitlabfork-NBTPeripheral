@@ -2,32 +2,31 @@ package nl.makertim.nbtperipheral.cc;
 
 import dan200.computercraft.api.peripheral.IPeripheral;
 import dan200.computercraft.api.peripheral.IPeripheralProvider;
-import net.minecraft.block.BlockBeacon;
-import net.minecraft.block.BlockPressurePlateWeighted;
-import net.minecraft.init.Blocks;
-import net.minecraft.util.EnumFacing;
+import net.minecraft.block.AbstractPressurePlateBlock;
+import net.minecraft.block.BeaconBlock;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.PressurePlateBlock;
+import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraftforge.common.util.LazyOptional;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
-/**
- * @author Tim Biesenbeek
- */
 public class PeripheralProvider implements IPeripheralProvider {
-	@Nullable
+
+	@Nonnull
 	@Override
-	public IPeripheral getPeripheral(@Nonnull World world, @Nonnull BlockPos pos, @Nonnull EnumFacing side) {
+	public LazyOptional<IPeripheral> getPeripheral(@Nonnull World world, @Nonnull BlockPos pos, @Nonnull Direction side) {
 		if (world.getBlockState(pos).getBlock() == Blocks.OBSERVER) {
-			return new ObserverPeripheral(world, pos);
+			return LazyOptional.of(() -> new ObserverPeripheral(world, pos));
 		}
-		if (world.getBlockState(pos).getBlock() instanceof BlockPressurePlateWeighted) {
-			return new PlatePeripheral(world, pos);
+		if (world.getBlockState(pos).getBlock() instanceof AbstractPressurePlateBlock) {
+			return LazyOptional.of(() -> new PlatePeripheral(world, pos));
 		}
-		if (world.getBlockState(pos).getBlock() instanceof BlockBeacon) {
-			return new BeaconPeripheral(world, pos);
+		if (world.getBlockState(pos).getBlock() instanceof BeaconBlock) {
+			return LazyOptional.of(() ->new BeaconPeripheral(world, pos));
 		}
-		return null;
+		return LazyOptional.empty();
 	}
 }

@@ -1,22 +1,11 @@
 package nl.makertim.nbtperipheral.cc;
 
-import java.util.Arrays;
-import java.util.Optional;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import dan200.computercraft.api.lua.ILuaContext;
-import dan200.computercraft.api.lua.LuaException;
-import dan200.computercraft.api.peripheral.IComputerAccess;
-import dan200.computercraft.api.peripheral.IPeripheral;
-import net.minecraft.entity.Entity;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.scoreboard.Team;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
+
+import javax.annotation.Nonnull;
 
 /**
  * @author Tim Biesenbeek
@@ -35,8 +24,8 @@ public class PlatePeripheral extends EntityPeripheral {
 	}
 
 	@Override
-	protected Vec3d getCenter() {
-		return new Vec3d(0.5D, 0D, 0.5D);
+	protected Vector3d getCenter() {
+		return new Vector3d(0.5D, 0D, 0.5D);
 	}
 
 	@Nonnull

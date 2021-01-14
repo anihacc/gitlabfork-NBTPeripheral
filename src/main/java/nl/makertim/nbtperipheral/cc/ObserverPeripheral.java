@@ -1,33 +1,32 @@
 package nl.makertim.nbtperipheral.cc;
 
-import static nl.makertim.nbtperipheral.cc.BlockStateUtil.stateToMap;
-import static nl.makertim.nbtperipheral.cc.NBTUtil.nbtToMap;
-
-import java.util.Arrays;
-import java.util.Optional;
+import dan200.computercraft.api.lua.IArguments;
+import dan200.computercraft.api.lua.ILuaContext;
+import dan200.computercraft.api.lua.LuaException;
+import dan200.computercraft.api.lua.MethodResult;
+import dan200.computercraft.api.peripheral.IComputerAccess;
+import dan200.computercraft.api.peripheral.IDynamicPeripheral;
+import dan200.computercraft.api.peripheral.IPeripheral;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.DirectionalBlock;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.Direction;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
-import dan200.computercraft.api.lua.ILuaContext;
-import dan200.computercraft.api.lua.LuaException;
-import dan200.computercraft.api.peripheral.IComputerAccess;
-import dan200.computercraft.api.peripheral.IPeripheral;
-import net.minecraft.block.BlockDirectional;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import java.util.Arrays;
+import java.util.Optional;
 
 /**
  * @author Tim Biesenbeek
  */
-public class ObserverPeripheral implements IPeripheral {
+public class ObserverPeripheral implements IDynamicPeripheral {
 
-	private World world;
-	private BlockPos pos;
+	private final World world;
+	private final BlockPos pos;
 
 	public ObserverPeripheral(World world, BlockPos pos) {
 		this.world = world;
@@ -35,16 +34,17 @@ public class ObserverPeripheral implements IPeripheral {
 	}
 
 	@Nonnull
-	protected Optional<EnumFacing> getFacing() {
-		IBlockState state = world.getBlockState(pos);
-		if (state.getPropertyKeys().contains(BlockDirectional.FACING)) {
-			return Optional.of(state.getValue(BlockDirectional.FACING));
+	protected Optional<Direction> getFacing() {
+		BlockState state = world.getBlockState(pos);
+
+		if (state.getValues().containsKey(DirectionalBlock.FACING)) {
+			return Optional.of(state.getValue(DirectionalBlock.FACING));
 		}
 		return Optional.empty();
 	}
 
-	protected BlockPos relative(EnumFacing facing) {
-		return pos.add(facing.getDirectionVec());
+	protected BlockPos relative(Direction facing) {
+		return pos.relative(facing);
 	}
 
 	@Nonnull
@@ -53,51 +53,64 @@ public class ObserverPeripheral implements IPeripheral {
 		return "NBT_Observer";
 	}
 
+	@Nullable
+	@Override
+	public Object getTarget() {
+		Optional<Direction> facingOptional = getFacing();
+		return facingOptional
+				.map(direction -> world.getBlockState(this.pos.relative(direction)))
+				.orElse(null);
+	}
+
 	@Nonnull
 	@Override
 	public String[] getMethodNames() {
-		return Arrays.stream(Methods.values()).map(Methods::getName).toArray(String[]::new);
+		return Arrays
+				.stream(Methods.values())
+				.map(Methods::getName)
+				.toArray(String[]::new);
 	}
 
-	@Nullable
+	@Nonnull
 	@Override
-	public Object[] callMethod(@Nonnull IComputerAccess computer, @Nonnull ILuaContext context, int method, @Nonnull Object[] arguments) throws LuaException {
+	public MethodResult callMethod(@Nonnull IComputerAccess computer, @Nonnull ILuaContext context, int method, @Nonnull IArguments arguments) throws LuaException {
 		try {
 			Methods methods = Methods.values()[method];
-			Optional<EnumFacing> facingOptional = getFacing();
+			Optional<Direction> facingOptional = getFacing();
 			if (!facingOptional.isPresent()) {
 				throw new LuaException("Cant read direction from the observer");
 			}
 			BlockPos relativePos = relative(facingOptional.get());
-			IBlockState state = world.getBlockState(relativePos);
-			TileEntity tile = world.getTileEntity(relativePos);
+			BlockState state = world.getBlockState(relativePos);
+			TileEntity tile = world.getBlockEntity(relativePos);
 			switch (methods) {
-			case READ_NBT:
-				if (tile == null) {
-					throw new LuaException("No TileEntity Found");
-				}
-				NBTTagCompound compound = new NBTTagCompound();
-				tile.writeToNBT(compound);
-				return new Object[]{nbtToMap(compound)};
-			case HAS_NBT:
-				return new Object[]{tile != null};
-			case READ_STATE:
-				if (state.getPropertyKeys().isEmpty()) {
-					throw new LuaException("No State Found");
-				}
-				return new Object[]{stateToMap(state)};
-			case HAS_STATE:
-				return new Object[]{state.getPropertyKeys().isEmpty()};
+				case READ_NBT:
+					if (tile == null) {
+						throw new LuaException("No TileEntity Found");
+					}
+					CompoundNBT compound = new CompoundNBT();
+					tile.deserializeNBT(compound);
+					return MethodResult.of(NBTUtil.nbtToMap(compound));
+				case HAS_NBT:
+					return MethodResult.of(tile != null);
+				case READ_STATE:
+					if (state.getValues().isEmpty()) {
+						throw new LuaException("No State Found");
+					}
+					return MethodResult.of(BlockStateUtil.stateToMap(state));
+				case HAS_STATE:
+					return MethodResult.of(state.getValues().isEmpty());
 			}
-			return new Object[0];
 		} catch (Exception ex) {
 			throw new LuaException(ex.getMessage());
 		}
+		return MethodResult.of();
 	}
 
 	@Override
 	public boolean equals(@Nullable IPeripheral other) {
-		return other instanceof ObserverPeripheral && ((ObserverPeripheral) other).world.equals(world)
+		return other instanceof ObserverPeripheral
+				&& ((ObserverPeripheral) other).world.equals(world)
 				&& ((ObserverPeripheral) other).pos.equals(pos);
 	}
 
@@ -108,7 +121,7 @@ public class ObserverPeripheral implements IPeripheral {
 			this.name = name;
 		}
 
-		private String name;
+		private final String name;
 
 		public String getName() {
 			return name;

@@ -1,25 +1,21 @@
 package nl.makertim.nbtperipheral.cc;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
 import com.google.gson.internal.LinkedTreeMap;
+import net.minecraft.block.BlockState;
 
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.nbt.*;
+import java.util.Map;
 
 /**
  * @author Tim Biesenbeek
  */
 public class BlockStateUtil extends CCUtil {
 
-	public static Map<String, Object> stateToMap(IBlockState state) {
+	public static Map<String, Object> stateToMap(BlockState state) {
 		Map<String, Object> nbtMap = new LinkedTreeMap<>(String::compareTo);
-		state.getPropertyKeys().forEach(stateKey -> {
-			Comparable<?> c = state.getValue(stateKey);
+		state.getValues().forEach((stateName, comparable) -> {
+			Comparable<?> c = state.getValue(stateName);
 			String value = c.toString();
-			nbtMap.put(stateKey.getName(), value);
+			nbtMap.put(stateName.getName(), value);
 		});
 		return nbtMap;
 	}
