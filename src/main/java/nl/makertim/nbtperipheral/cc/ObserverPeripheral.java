@@ -14,6 +14,7 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.world.chunk.Chunk;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -82,15 +83,14 @@ public class ObserverPeripheral implements IDynamicPeripheral {
 			}
 			BlockPos relativePos = relative(facingOptional.get());
 			BlockState state = world.getBlockState(relativePos);
-			TileEntity tile = world.getBlockEntity(relativePos);
+			TileEntity tile = world.getChunkAt(pos).getBlockEntity(relativePos, Chunk.CreateEntityType.IMMEDIATE);
 			switch (methods) {
+				default:
 				case READ_NBT:
 					if (tile == null) {
 						throw new LuaException("No TileEntity Found");
 					}
-					CompoundNBT compound = new CompoundNBT();
-					tile.deserializeNBT(compound);
-					return MethodResult.of(NBTUtil.nbtToMap(compound));
+					return MethodResult.of(NBTUtil.nbtToMap(tile.serializeNBT()));
 				case HAS_NBT:
 					return MethodResult.of(tile != null);
 				case READ_STATE:
@@ -99,12 +99,47 @@ public class ObserverPeripheral implements IDynamicPeripheral {
 					}
 					return MethodResult.of(BlockStateUtil.stateToMap(state));
 				case HAS_STATE:
-					return MethodResult.of(state.getValues().isEmpty());
+					return MethodResult.of(!state.getValues().isEmpty());
+//				case DEBUG:
+//					Map<String, Object> debugMap = new LinkedTreeMap<>(String::compareTo);
+//					debugMap.put("tileX", relativePos.getX());
+//					debugMap.put("tileY", relativePos.getY());
+//					debugMap.put("tileZ", relativePos.getZ());
+//					debugMap.put("tile", tile == null ? "null" : tile.getClass().getName());
+//					debugMap.put("chunkX", world.getChunkAt(pos).getPos().x);
+//					debugMap.put("chunkZ", world.getChunkAt(pos).getPos().z);
+//					debugMap.put("chunkTilesCount", world.getChunkAt(pos).getBlockEntities().size());
+//
+//					tile = world.getChunkAt(relativePos).getBlockEntities().get(relativePos);
+//					debugMap.put("chunkTile", tile == null ? "null" : tile.getClass().getName());
+//
+//					Map<BlockPos, TileEntity> list = world.getChunkAt(relativePos).getBlockEntities();
+//					int[] i = { 0 };
+//					list.forEach((pos, tilePos) -> {
+//						if (!(tilePos instanceof ChestTileEntity)) {
+//							return;
+//						}
+//						i[0]++;
+//						debugMap.put("chunkTile_" + i[0], tilePos.getClass().getSimpleName() + " " + pos.toString());
+//						debugMap.put("chunkTile_" + i[0] + "x", NBTUtil.nbtToMap(tilePos.save(new CompoundNBT())));
+//					});
+//					debugMap.put("chunkTileTest", pos.toString());
+//					debugMap.put("chunkTileTestx", world.getChunkAt(relativePos).getBlockEntities().get(relativePos).toString());
+//					debugMap.put("chunkTileTestxz", world.getChunkAt(relativePos)
+//							.getBlockEntities()
+//							.entrySet()
+//							.stream()
+//							.filter(entry -> {
+//								return entry.getKey().equals(pos);
+//							}).findFirst()
+//							.orElse(null)
+//					);
+//
+//					return MethodResult.of(debugMap);
 			}
 		} catch (Exception ex) {
 			throw new LuaException(ex.getMessage());
 		}
-		return MethodResult.of();
 	}
 
 	@Override
@@ -115,16 +150,10 @@ public class ObserverPeripheral implements IDynamicPeripheral {
 	}
 
 	public enum Methods {
-		READ_NBT("read_nbt"), HAS_NBT("has_nbt"), READ_STATE("read_state"), HAS_STATE("has_state");
-
-		Methods(String name) {
-			this.name = name;
-		}
-
-		private final String name;
+		READ_NBT, HAS_NBT, READ_STATE, HAS_STATE/*, DEBUG*/;
 
 		public String getName() {
-			return name;
+			return name().toLowerCase();
 		}
 	}
 }
