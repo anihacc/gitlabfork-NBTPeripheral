@@ -1,5 +1,6 @@
 package nl.makertim.nbtperipheral.cc;
 
+import com.google.gson.internal.LinkedTreeMap;
 import dan200.computercraft.api.lua.IArguments;
 import dan200.computercraft.api.lua.ILuaContext;
 import dan200.computercraft.api.lua.LuaException;
@@ -18,6 +19,7 @@ import net.minecraft.world.World;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -33,7 +35,7 @@ public abstract class EntityPeripheral implements IDynamicPeripheral {
 	}
 
 	protected Entity[] getEntities() {
-		return world.getEntities(null, getRange().move(pos)).toArray(new Entity[0]);
+		return world.getEntities(null, getRange()).toArray(new Entity[0]);
 	}
 
 	protected abstract AxisAlignedBB getRange();
@@ -57,9 +59,10 @@ public abstract class EntityPeripheral implements IDynamicPeripheral {
 			Methods methods = Methods.values()[method];
 			Entity[] entities = getEntities();
 			switch (methods) {
+				default:
 				case READ:
 					if (entities.length == 0) {
-						break;
+						return MethodResult.of();
 					}
 					return MethodResult.of(
 							Arrays.stream(entities).parallel().map(entity -> {
@@ -88,11 +91,24 @@ public abstract class EntityPeripheral implements IDynamicPeripheral {
 					return MethodResult.of(entities.length);
 				case IS_EMPTY:
 					return MethodResult.of(entities.length == 0);
+				// case DEBUG:
+				// 	AxisAlignedBB aabb = getRange();
+				// 	Map<String, Object> aabbMap = new LinkedTreeMap<>(String::compareTo);
+				// 	aabbMap.put("tile", world.getBlockEntity(pos) == null ? null : world.getBlockEntity(pos).getClass().toString());
+				// 	aabbMap.put("tilePosX", pos.getX());
+				// 	aabbMap.put("tilePosY", pos.getY());
+				// 	aabbMap.put("tilePosZ", pos.getZ());
+				// 	aabbMap.put("minX", aabb.minX);
+				// 	aabbMap.put("minY", aabb.minY);
+				// 	aabbMap.put("minZ", aabb.minZ);
+				// 	aabbMap.put("maxX", aabb.maxX);
+				// 	aabbMap.put("maxY", aabb.maxY);
+				// 	aabbMap.put("maxZ", aabb.maxZ);
+				// 	return MethodResult.of(aabbMap);
 			}
 		} catch (Exception ex) {
 			throw new LuaException(ex.getMessage());
 		}
-		return MethodResult.of();
 	}
 
 	@Override
@@ -102,16 +118,10 @@ public abstract class EntityPeripheral implements IDynamicPeripheral {
 	}
 
 	public enum Methods {
-		IS_EMPTY("is_empty"), COUNT("count"), READ("read");
-
-		Methods(String name) {
-			this.name = name;
-		}
-
-		private String name;
+		IS_EMPTY, COUNT, READ/*, DEBUG*/;
 
 		public String getName() {
-			return name;
+			return name().toLowerCase();
 		}
 	}
 }

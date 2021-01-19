@@ -20,7 +20,7 @@ public class PlatePeripheral extends EntityPeripheral {
 	}
 
 	protected AxisAlignedBB getRange() {
-		return PRESSURE_AABB;
+		return PRESSURE_AABB.move(pos);
 	}
 
 	@Override
